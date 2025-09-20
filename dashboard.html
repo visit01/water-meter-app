@@ -18,7 +18,6 @@
     </style>
 </head>
 <body>
-
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <span class="navbar-brand">
@@ -28,23 +27,19 @@
             <button class="btn btn-danger" id="logoutBtn">ออกจากระบบ</button>
         </div>
     </nav>
-
     <div class="container mt-4">
         <h3 class="mb-4">รายการลูกค้าที่ต้องจดมิเตอร์</h3>
-        
         <div class="mb-3">
             <input type="text" class="form-control" id="searchBox" placeholder="ค้นหาด้วยชื่อหรือเลขมิเตอร์">
         </div>
-
         <div id="customerList" class="row">
             <p class="text-center text-muted" id="loadingMessage">กำลังโหลดข้อมูล...</p>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="script.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html>
