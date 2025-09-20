@@ -24,7 +24,6 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// จัดการการส่งฟอร์มล็อกอิน
 if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -33,7 +32,7 @@ if (loginForm) {
         
         auth.signInWithEmailAndPassword(email, password)
             .then(userCredential => {
-                // ไม่ต้องทำอะไรตรงนี้ เพราะ onAuthStateChanged จะจัดการการเปลี่ยนเส้นทาง
+                // onAuthStateChanged จะจัดการการเปลี่ยนเส้นทางเอง
             })
             .catch(error => {
                 errorMessageElement.textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
