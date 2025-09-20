@@ -1,4 +1,9 @@
-// ใส่ Firebase config ของโปรเจกต์ของคุณที่นี่
+// ต้องเชื่อมต่อ Firebase SDK ในไฟล์ HTML ก่อน
+// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+// ใส่ Firebase config ของโปรเจกต์ของคุณที่นี่ (จำเป็นมาก)
 const firebaseConfig = {
   apiKey: "AIzaSyB1GsiG6eFkmae-eP1i9rSeleuwZPyfCqs",
   authDomain: "smart-water-meter-24ea9.firebaseapp.com",
@@ -16,28 +21,16 @@ const db = firebase.firestore();
 
 let customersData = [];
 
-// ส่วนจัดการ Authentication และหน้าจอ
-auth.onAuthStateChanged(user => {
-    if (user) {
-        if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-            window.location.href = "dashboard.html";
-        } else {
-            fetchCustomers();
-            setupLogout();
-        }
-    } else {
-        if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-            window.location.href = "index.html";
-        }
-    }
-});
+// ==========================================================
+// ส่วนที่ 1: ฟังก์ชันสำหรับจัดการการแสดงผลและการทำงานของ Dashboard
+// ==========================================================
 
 // ฟังก์ชันสำหรับดึงข้อมูลลูกค้าจาก Firestore
 async function fetchCustomers() {
     const customerListDiv = document.getElementById('customerList');
     const loadingMessage = document.getElementById('loadingMessage');
     
-    loadingMessage.style.display = 'block';
+    loadingMessage.style.display = 'block'; // แสดงข้อความ "กำลังโหลด"
 
     try {
         const snapshot = await db.collection('customers').get();
@@ -48,11 +41,11 @@ async function fetchCustomers() {
         console.error("Error fetching customers: ", error);
         customerListDiv.innerHTML = '<p class="text-danger text-center">เกิดข้อผิดพลาดในการโหลดข้อมูลลูกค้า</p>';
     } finally {
-        loadingMessage.style.display = 'none';
+        loadingMessage.style.display = 'none'; // ซ่อนข้อความ "กำลังโหลด"
     }
 }
 
-// ฟังก์ชันสำหรับแสดงผลข้อมูลลูกค้า
+// ฟังก์ชันสำหรับแสดงผลข้อมูลลูกค้าในรูปแบบการ์ด
 function displayCustomers(customers) {
     const customerListDiv = document.getElementById('customerList');
     customerListDiv.innerHTML = '';
@@ -78,7 +71,22 @@ function displayCustomers(customers) {
     });
 }
 
-// ฟังก์ชันสำหรับออกจากระบบ
+// ฟังก์ชันสำหรับจัดการการค้นหาลูกค้า
+function setupSearch() {
+    const searchBox = document.getElementById('searchBox');
+    if (searchBox) {
+        searchBox.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredCustomers = customersData.filter(customer => {
+                return customer.name.toLowerCase().includes(searchTerm) || 
+                       customer.meterNumber.toLowerCase().includes(searchTerm);
+            });
+            displayCustomers(filteredCustomers);
+        });
+    }
+}
+
+// ฟังก์ชันสำหรับจัดการปุ่ม "ออกจากระบบ"
 function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -93,37 +101,59 @@ function setupLogout() {
     }
 }
 
-// จัดการค้นหาลูกค้า
-const searchBox = document.getElementById('searchBox');
-if (searchBox) {
-    searchBox.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filteredCustomers = customersData.filter(customer => {
-            return customer.name.toLowerCase().includes(searchTerm) || 
-                   customer.meterNumber.toLowerCase().includes(searchTerm);
+// ==========================================================
+// ส่วนที่ 2: ฟังก์ชันสำหรับจัดการการล็อกอิน
+// ==========================================================
+
+// ฟังก์ชันสำหรับจัดการการส่งฟอร์มล็อกอิน
+function handleLogin() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const errorMessageElement = document.getElementById('errorMessage');
+            
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    // ไม่ต้องทำอะไร เพราะ onAuthStateChanged จะจัดการการเปลี่ยนเส้นทางเอง
+                })
+                .catch(error => {
+                    errorMessageElement.textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+                });
         });
-        displayCustomers(filteredCustomers);
-    });
+    }
 }
 
-// ส่วนของโค้ดล็อกอินที่ย้ายมาจากหน้า index.html
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const errorMessageElement = document.getElementById('errorMessage');
-        
-        const email = emailInput.value;
-        const password = passwordInput.value;
-        
-        auth.signInWithEmailAndPassword(email, password)
-            .then(userCredential => {
-                window.location.href = "dashboard.html";
-            })
-            .catch(error => {
-                errorMessageElement.textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-            });
-    });
-}
+// ==========================================================
+// ส่วนที่ 3: การจัดการสถานะผู้ใช้เมื่อโหลดหน้าเว็บ
+// ==========================================================
+
+// ตรวจสอบสถานะการล็อกอินของผู้ใช้เมื่อโหลดหน้าเว็บ
+auth.onAuthStateChanged(user => {
+    // ผู้ใช้ล็อกอินอยู่
+    if (user) {
+        if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+            // ถ้าอยู่หน้า Login ให้เปลี่ยนไปหน้า Dashboard
+            window.location.href = "dashboard.html";
+        } else {
+            // ถ้าอยู่หน้า Dashboard ให้ดึงข้อมูลมาแสดงผลและตั้งค่าปุ่มต่างๆ
+            fetchCustomers();
+            setupLogout();
+            setupSearch();
+        }
+    } else {
+        // ผู้ใช้ไม่ได้ล็อกอิน
+        if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+            // ถ้าอยู่หน้า Dashboard ให้เปลี่ยนไปหน้า Login
+            window.location.href = "index.html";
+        }
+    }
+});
+
+// เรียกใช้ฟังก์ชัน handleLogin() ทันทีที่โหลดหน้าเว็บ
+handleLogin();
