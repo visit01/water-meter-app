@@ -1,6 +1,4 @@
-// dashboard.js
-
-// Firebase config and initialization (copy and paste your config here)
+// ใส่ Firebase config ของโปรเจกต์ของคุณที่นี่ (เหมือนกับใน login.js)
 const firebaseConfig = {
   apiKey: "AIzaSyB1GsiG6eFkmae-eP1i9rSeleuwZPyfCqs",
   authDomain: "smart-water-meter-24ea9.firebaseapp.com",
@@ -17,23 +15,27 @@ const db = firebase.firestore();
 
 let customersData = [];
 
-// --- All function definitions go here, before onAuthStateChanged ---
+// ฟังก์ชันสำหรับดึงข้อมูลลูกค้าจาก Firestore
+async function fetchCustomers() {
+    const customerListDiv = document.getElementById('customerList');
+    const loadingMessage = document.getElementById('loadingMessage');
+    
+    loadingMessage.style.display = 'block';
 
-// Function to set up the logout button
-function setupLogout() {
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut().then(() => {
-                window.location.href = "index.html";
-            }).catch((error) => {
-                console.error("Logout error:", error);
-            });
-        });
+    try {
+        const snapshot = await db.collection('customers').get();
+        customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        displayCustomers(customersData);
+    } catch (error) {
+        console.error("Error fetching customers: ", error);
+        customerListDiv.innerHTML = '<p class="text-danger text-center">เกิดข้อผิดพลาดในการโหลดข้อมูลลูกค้า</p>';
+    } finally {
+        loadingMessage.style.display = 'none';
     }
 }
 
-// Function to display customer data
+// ฟังก์ชันสำหรับแสดงผลข้อมูลลูกค้าในรูปแบบการ์ด
 function displayCustomers(customers) {
     const customerListDiv = document.getElementById('customerList');
     customerListDiv.innerHTML = '';
@@ -59,45 +61,42 @@ function displayCustomers(customers) {
     });
 }
 
-// Function to fetch customers from Firestore
-async function fetchCustomers() {
-    const customerListDiv = document.getElementById('customerList');
-    const loadingMessage = document.getElementById('loadingMessage');
-    
-    loadingMessage.style.display = 'block';
-
-    try {
-        const snapshot = await db.collection('customers').get();
-        customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        displayCustomers(customersData);
-    } catch (error) {
-        console.error("Error fetching customers: ", error);
-        customerListDiv.innerHTML = '<p class="text-danger text-center">เกิดข้อผิดพลาดในการโหลดข้อมูลลูกค้า</p>';
-    } finally {
-        loadingMessage.style.display = 'none';
+// ฟังก์ชันสำหรับจัดการปุ่ม "ออกจากระบบ"
+function setupLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                console.log("User signed out.");
+                window.location.href = "index.html";
+            }).catch((error) => {
+                console.error("Logout error:", error);
+            });
+        });
     }
 }
 
-// Function to handle search
-const searchBox = document.getElementById('searchBox');
-if (searchBox) {
-    searchBox.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filteredCustomers = customersData.filter(customer => {
-            return customer.name.toLowerCase().includes(searchTerm) || 
-                   customer.meterNumber.toLowerCase().includes(searchTerm);
+// ฟังก์ชันสำหรับจัดการการค้นหาลูกค้า
+function setupSearch() {
+    const searchBox = document.getElementById('searchBox');
+    if (searchBox) {
+        searchBox.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredCustomers = customersData.filter(customer => {
+                return customer.name.toLowerCase().includes(searchTerm) || 
+                       customer.meterNumber.toLowerCase().includes(searchTerm);
+            });
+            displayCustomers(filteredCustomers);
         });
-        displayCustomers(filteredCustomers);
-    });
+    }
 }
 
-// --- Now, onAuthStateChanged can safely call the functions ---
-
+// ตรวจสอบสถานะการล็อกอินเมื่อโหลดหน้า
 auth.onAuthStateChanged(user => {
     if (user) {
         fetchCustomers();
         setupLogout();
+        setupSearch();
     } else {
         window.location.href = "index.html";
     }
