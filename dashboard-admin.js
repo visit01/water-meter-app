@@ -11,26 +11,116 @@ const firebaseConfig = {
   measurementId: "G-9EZVLS42W4"
 };
 
-// เริ่มต้น Firebase
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ตรวจสอบสถานะการล็อกอินและบทบาทเมื่อโหลดหน้าเว็บ
-auth.onAuthStateChanged(async user => {
-    if (user) {
-        const userDoc = await db.collection("users").doc(user.uid).get();
-        if (userDoc.exists && userDoc.data().role === 'admin') {
-            loadDashboardData();
-            setupAdminLogout();
-        } else {
-            await auth.signOut();
-            window.location.href = "admin-login.html";
-        }
-    } else {
-        window.location.href = "admin-login.html";
+// ==========================================================
+// ส่วนที่ 1: การประกาศฟังก์ชันทั้งหมด (ย้ายมาไว้ด้านบน)
+// ==========================================================
+
+// ฟังก์ชันหลักสำหรับโหลดข้อมูลทั้งหมด
+async function loadDashboardData() {
+    await fetchCustomers();
+    await fetchReadings();
+}
+
+// ฟังก์ชันสำหรับดึงข้อมูลลูกค้าทั้งหมด
+async function fetchCustomers() {
+    const tableBody = document.getElementById('customersTableBody');
+    const loadingMessage = document.getElementById('customersLoadingMessage');
+    const totalCustomersCount = document.getElementById('totalCustomersCount');
+    
+    tableBody.innerHTML = '';
+    loadingMessage.style.display = 'block';
+
+    try {
+        const snapshot = await db.collection('customers').get();
+        const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        totalCustomersCount.textContent = customers.length;
+        
+        customers.forEach(customer => {
+            const row = `
+                <tr>
+                    <td>${customer.name}</td>
+                    <td>${customer.meterNumber}</td>
+                    <td>${customer.address}</td>
+                    <td>${customer.lastReading}</td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+    } catch (error) {
+        console.error("Error fetching customers:", error);
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+    } finally {
+        loadingMessage.style.display = 'none';
     }
-});
+}
+
+// ฟังก์ชันสำหรับดึงข้อมูลการจดมิเตอร์ทั้งหมด
+async function fetchReadings() {
+    const tableBody = document.getElementById('readingsTableBody');
+    const loadingMessage = document.getElementById('readingsLoadingMessage');
+    const todayReadingsCount = document.getElementById('todayReadingsCount');
+    
+    tableBody.innerHTML = '';
+    loadingMessage.style.display = 'block';
+
+    try {
+        const readingsSnapshot = await db.collection('readings').orderBy('readingDate', 'desc').get();
+        const readings = readingsSnapshot.docs.map(doc => doc.data());
+
+        const today = new Date().setHours(0, 0, 0, 0);
+        let todayCount = 0;
+        
+        const usersMap = {};
+        const customersMap = {};
+
+        const usersSnapshot = await db.collection('users').get();
+        usersSnapshot.forEach(doc => {
+            usersMap[doc.id] = doc.data().name || 'ไม่ระบุชื่อ';
+        });
+
+        const customersSnapshot = await db.collection('customers').get();
+        customersSnapshot.forEach(doc => {
+            customersMap[doc.id] = doc.data().name || 'ไม่ระบุชื่อลูกค้า';
+        });
+
+        readings.forEach(reading => {
+            const readingDate = reading.readingDate.toDate();
+            const photoURL = reading.photoURL;
+
+            if (readingDate.setHours(0, 0, 0, 0) === today) {
+                todayCount++;
+            }
+
+            const staffName = usersMap[reading.readingBy] || 'ไม่ระบุชื่อเจ้าหน้าที่';
+            const customerName = customersMap[reading.customerId] || 'ไม่ระบุชื่อลูกค้า';
+
+            const row = `
+                <tr>
+                    <td>${staffName}</td>
+                    <td>${customerName}</td>
+                    <td>${reading.meterNumber}</td>
+                    <td>${reading.currentReading}</td>
+                    <td>${readingDate.toLocaleDateString('th-TH')}</td>
+                    <td><a href="${photoURL}" target="_blank">ดูรูปภาพ</a></td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+
+        todayReadingsCount.textContent = todayCount;
+
+    } catch (error) {
+        console.error("Error fetching readings:", error);
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+    } finally {
+        loadingMessage.style.display = 'none';
+    }
+}
 
 // ฟังก์ชันสำหรับจัดการปุ่ม "ออกจากระบบ"
 function setupAdminLogout() {
@@ -46,7 +136,21 @@ function setupAdminLogout() {
     }
 }
 
-// *** คัดลอกฟังก์ชันเหล่านี้มาจาก admin.js เดิม แล้วนำมาวางตรงนี้ ***
-// async function loadDashboardData() { ... }
-// async function fetchCustomers() { ... }
-// async function fetchReadings() { ... }
+// ==========================================================
+// ส่วนที่ 2: การจัดการสถานะผู้ใช้ (เรียกฟังก์ชันที่ประกาศไว้แล้ว)
+// ==========================================================
+
+auth.onAuthStateChanged(async user => {
+    if (user) {
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().role === 'admin') {
+            loadDashboardData();
+            setupAdminLogout();
+        } else {
+            await auth.signOut();
+            window.location.href = "admin-login.html";
+        }
+    } else {
+        window.location.href = "admin-login.html";
+    }
+});
