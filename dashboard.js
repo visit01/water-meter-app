@@ -1,16 +1,3 @@
-// dashboard.js
-
-// Firebase config และการเริ่มต้น (อย่าลืมเปลี่ยนเป็นของโปรเจกต์คุณ)
-const firebaseConfig = {
-  apiKey: "AIzaSyB1GsiG6eFkmae-eP1i9rSeleuwZPyfCqs",
-  authDomain: "smart-water-meter-24ea9.firebaseapp.com",
-  projectId: "smart-water-meter-24ea9",
-  storageBucket: "smart-water-meter-24ea9.firebasestorage.app",
-  messagingSenderId: "11062650999",
-  appId: "1:11062650999:web:3afd85b204d42ed6b4be72",
-  measurementId: "G-9EZVLS42W4"
-};
-
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -26,10 +13,11 @@ auth.onAuthStateChanged(async user => {
         if (userDoc.exists) {
             document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
             userAgencyId = userDoc.data().agencyId;
+            // เพิ่มส่วนนี้เพื่อแสดงชื่อหน่วยงาน
+            await fetchAgencyName(userAgencyId);
         }
 
         if (userAgencyId) {
-            fetchAgencyName(userAgencyId);
             fetchCustomers();
             setupSearch();
             setupLogout();
@@ -43,7 +31,20 @@ auth.onAuthStateChanged(async user => {
     }
 });
 
-// ฟังก์ชันสำหรับดึงชื่อหน่วยงานจาก Firestore
+async function fetchUserName(uid) {
+    try {
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (userDoc.exists) {
+            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+        } else {
+            document.getElementById('userName').textContent = 'ไม่ระบุชื่อ';
+        }
+    } catch (error) {
+        console.error("Error fetching user name:", error);
+    }
+}
+
+// ฟังก์ชันใหม่สำหรับดึงชื่อหน่วยงาน
 async function fetchAgencyName(agencyId) {
     try {
         const agencyDoc = await db.collection("agencies").doc(agencyId).get();
