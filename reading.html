@@ -39,7 +39,13 @@
         <form id="readingForm">
             <div class="mb-3">
                 <label for="currentReading" class="form-label">เลขมิเตอร์ปัจจุบัน</label>
-                <input type="number" class="form-control" id="currentReading" placeholder="กรอกเลขมิเตอร์" required>
+                <div class="input-group">
+                    <input type="number" class="form-control" id="currentReading" placeholder="กรอกเลขมิเตอร์" required>
+                    <button class="btn btn-outline-secondary" type="button" id="voiceInputBtn">
+                        🎤
+                    </button>
+                </div>
+                <small id="voiceStatus" class="form-text text-muted d-none">โปรดพูดเลขมิเตอร์...</small>
             </div>
             
             <div class="mb-3">
