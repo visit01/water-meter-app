@@ -1,31 +1,31 @@
+// dashboard.js
+
+// Firebase config และการเริ่มต้น (อย่าลืมเปลี่ยนเป็นของโปรเจกต์คุณ)
+const firebaseConfig = {
+  apiKey: "AIzaSyB1GsiG6eFkmae-eP1i9rSeleuwZPyfCqs",
+  authDomain: "smart-water-meter-24ea9.firebaseapp.com",
+  projectId: "smart-water-meter-24ea9",
+  storageBucket: "smart-water-meter-24ea9.firebasestorage.app",
+  messagingSenderId: "11062650999",
+  appId: "1:11062650999:web:3afd85b204d42ed6b4be72",
+  measurementId: "G-9EZVLS42W4"
+};
+
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 let customers = [];
-let userAgencyId = null;
 let html5QrCode = null;
 
-auth.onAuthStateChanged(async user => {
+auth.onAuthStateChanged(user => {
     if (user) {
         document.getElementById('userEmail').textContent = user.email;
-        const userDoc = await db.collection("users").doc(user.uid).get();
-        if (userDoc.exists) {
-            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
-            userAgencyId = userDoc.data().agencyId;
-            // เพิ่มส่วนนี้เพื่อแสดงชื่อหน่วยงาน
-            await fetchAgencyName(userAgencyId);
-        }
-
-        if (userAgencyId) {
-            fetchCustomers();
-            setupSearch();
-            setupLogout();
-            setupQrCodeScanner();
-        } else {
-            console.error("User does not have an agencyId. Please contact admin.");
-            auth.signOut();
-        }
+        fetchUserName(user.uid);
+        fetchCustomers();
+        setupSearch();
+        setupLogout();
+        setupQrCodeScanner();
     } else {
         window.location.href = "index.html";
     }
@@ -44,27 +44,13 @@ async function fetchUserName(uid) {
     }
 }
 
-// ฟังก์ชันใหม่สำหรับดึงชื่อหน่วยงาน
-async function fetchAgencyName(agencyId) {
-    try {
-        const agencyDoc = await db.collection("agencies").doc(agencyId).get();
-        if (agencyDoc.exists) {
-            document.getElementById('userAgencyName').textContent = agencyDoc.data().agencyName || 'ไม่ระบุหน่วยงาน';
-        } else {
-            document.getElementById('userAgencyName').textContent = 'ไม่พบหน่วยงาน';
-        }
-    } catch (error) {
-        console.error("Error fetching agency name:", error);
-    }
-}
-
 async function fetchCustomers() {
     const customersList = document.getElementById('customersList');
     const loadingMessage = document.getElementById('loadingMessage');
     customersList.innerHTML = '';
     loadingMessage.style.display = 'block';
     try {
-        const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).orderBy('name').get();
+        const snapshot = await db.collection('customers').orderBy('name').get();
         customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         displayCustomers(customers);
     } catch (error) {
