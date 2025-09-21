@@ -11,52 +11,57 @@ const firebaseConfig = {
   measurementId: "G-9EZVLS42W4"
 };
 
+JavaScript
+// dashboard.js
+
+// ใส่ Firebase config ของโปรเจกต์ของคุณที่นี่
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 let customers = [];
+let userAgencyId = null;
 let html5QrCode = null;
 
-// ==========================================================
-// ส่วนที่ 1: การจัดการสถานะผู้ใช้และดึงข้อมูล
-// ==========================================================
-
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
     if (user) {
         document.getElementById('userEmail').textContent = user.email;
-        fetchUserName(user.uid);
-        
-        fetchCustomers();
-        setupSearch();
-        setupLogout();
-        setupQrCodeScanner();
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        if (userDoc.exists) {
+            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+            userAgencyId = userDoc.data().agencyId;
+        }
+
+        if (userAgencyId) {
+            fetchCustomers();
+            setupSearch();
+            setupLogout();
+            setupQrCodeScanner();
+        } else {
+            console.error("User does not have an agencyId. Please contact admin.");
+            auth.signOut();
+        }
     } else {
         window.location.href = "index.html";
     }
 });
-
-async function fetchUserName(uid) {
-    try {
-        const userDoc = await db.collection("users").doc(uid).get();
-        if (userDoc.exists) {
-            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
-        } else {
-            document.getElementById('userName').textContent = 'ไม่ระบุชื่อ';
-        }
-    } catch (error) {
-        console.error("Error fetching user name:", error);
-    }
-}
 
 async function fetchCustomers() {
     const customersList = document.getElementById('customersList');
     const loadingMessage = document.getElementById('loadingMessage');
     customersList.innerHTML = '';
     loadingMessage.style.display = 'block';
-
     try {
-        const snapshot = await db.collection('customers').orderBy('name').get();
+        const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).orderBy('name').get();
         customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         displayCustomers(customers);
     } catch (error) {
@@ -88,10 +93,6 @@ function displayCustomers(customerArray) {
     });
 }
 
-// ==========================================================
-// ส่วนที่ 2: การจัดการฟังก์ชันอื่นๆ
-// ==========================================================
-
 function setupSearch() {
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('input', (e) => {
@@ -117,38 +118,27 @@ function setupLogout() {
     }
 }
 
-// ฟังก์ชันสำหรับสแกน QR Code
 function setupQrCodeScanner() {
     const scanQrCodeBtn = document.getElementById('scanQrCodeBtn');
     const qrReaderDiv = document.getElementById('qr-reader');
     const searchInput = document.getElementById('searchInput');
-    
-    // ตั้งค่า HTML5 Qrcode
     html5QrCode = new Html5Qrcode("qr-reader");
 
     scanQrCodeBtn.addEventListener('click', () => {
-        // เริ่มสแกนเมื่อคลิกปุ่ม
         html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 250 } },
             (decodedText) => {
-                // เมื่อสแกนสำเร็จ
                 searchInput.value = decodedText;
-                
-                // กระตุ้น Event 'input' เพื่อให้ค้นหาลูกค้าทันที
                 const event = new Event('input');
                 searchInput.dispatchEvent(event);
-                
-                // หยุดการทำงานของกล้อง
                 html5QrCode.stop().then(() => {
                     qrReaderDiv.style.display = 'none';
                 }).catch(err => {
                     console.error("Failed to stop scanner:", err);
                 });
             },
-            (errorMessage) => {
-                // แสดงข้อผิดพลาด
-            }
+            (errorMessage) => {}
         ).catch(err => {
             console.error("Failed to start scanner:", err);
             alert("ไม่สามารถเข้าถึงกล้องได้ กรุณาตรวจสอบสิทธิ์การเข้าถึง");
