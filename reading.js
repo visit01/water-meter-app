@@ -20,25 +20,20 @@ let customerId = null;
 let loggedInUser = null;
 let lastReadingValue = 0;
 let lastMeterNumber = null;
-let userAgencyId = null;
 
 auth.onAuthStateChanged(async user => {
     if (user) {
         loggedInUser = user;
         document.getElementById('userEmail').textContent = loggedInUser.email;
         fetchUserName(loggedInUser.uid);
-        const userDoc = await db.collection("users").doc(user.uid).get();
-        if (userDoc.exists) {
-            userAgencyId = userDoc.data().agencyId;
-        }
         
         const params = new URLSearchParams(window.location.search);
         customerId = params.get('customerId');
         
-        if (customerId && userAgencyId) {
+        if (customerId) {
             fetchCustomerData(customerId);
         } else {
-            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า หรือไม่มีสังกัดหน่วยงาน';
+            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า';
         }
         setupLogout();
         setupVoiceInput();
@@ -63,7 +58,7 @@ async function fetchUserName(uid) {
 async function fetchCustomerData(id) {
     try {
         const docRef = await db.collection("customers").doc(id).get();
-        if (docRef.exists && docRef.data().agencyId === userAgencyId) {
+        if (docRef.exists) {
             const data = docRef.data();
             lastReadingValue = data.lastReading || 0;
             lastMeterNumber = data.meterNumber;
@@ -72,7 +67,7 @@ async function fetchCustomerData(id) {
             document.getElementById('meterNumber').textContent = data.meterNumber;
             document.getElementById('lastReading').textContent = data.lastReading || 0;
         } else {
-            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า หรือไม่มีสังกัดหน่วยงาน';
+            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า';
         }
     } catch (error) {
         console.error("Error fetching customer data:", error);
@@ -118,8 +113,7 @@ readingForm.addEventListener('submit', async (e) => {
             previousReading: lastReadingValue,
             readingDate: firebase.firestore.FieldValue.serverTimestamp(),
             readingBy: loggedInUser.uid, 
-            photoURL: photoURL,
-            agencyId: userAgencyId
+            photoURL: photoURL
         });
         await db.collection("customers").doc(customerId).update({
             lastReading: currentReading
