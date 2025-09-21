@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <span class="navbar-brand">
@@ -47,10 +48,27 @@
             </div>
         </div>
 
-        <div class="mt-4 mb-4 text-center">
-            <a href="admin-customer-management.html" class="btn btn-primary btn-lg shadow">
-                จัดการข้อมูลลูกค้า
-            </a>
+        <div class="card mt-4 mb-4 shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">จัดการข้อมูลลูกค้า</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ชื่อลูกค้า</th>
+                                <th>เลขมิเตอร์</th>
+                                <th>ที่อยู่</th>
+                                <th>เลขล่าสุด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            </tbody>
+                    </table>
+                </div>
+                <p class="text-center text-muted" id="customersLoadingMessage">กำลังโหลดข้อมูลลูกค้า...</p>
+            </div>
         </div>
 
         <div class="card mt-4 mb-4 shadow">
@@ -71,7 +89,7 @@
                             </tr>
                         </thead>
                         <tbody id="readingsTableBody">
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
                 <p class="text-center text-muted" id="readingsLoadingMessage">กำลังโหลดข้อมูลการจดมิเตอร์...</p>
