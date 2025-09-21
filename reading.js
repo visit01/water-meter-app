@@ -1,10 +1,6 @@
-// ต้องเชื่อมต่อ Firebase SDK ในไฟล์ HTML ก่อน
-// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+// reading.js
 
-// ใส่ Firebase config ของโปรเจกต์ของคุณที่นี่
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyB1GsiG6eFkmae-eP1i9rSeleuwZPyfCqs",
   authDomain: "smart-water-meter-24ea9.firebaseapp.com",
@@ -23,12 +19,12 @@ const storage = firebase.storage();
 let customerId = null;
 let loggedInUser = null;
 let lastReadingValue = 0;
+let lastMeterNumber = null;
 
 // ==========================================================
 // ส่วนที่ 1: การจัดการสถานะผู้ใช้และดึงข้อมูลลูกค้า
 // ==========================================================
 
-// ตรวจสอบสถานะการล็อกอินของผู้ใช้เมื่อโหลดหน้าเว็บ
 auth.onAuthStateChanged(user => {
     if (user) {
         loggedInUser = user;
@@ -46,7 +42,6 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// ฟังก์ชันสำหรับดึงข้อมูลลูกค้าจาก Firestore
 async function fetchCustomerData(id) {
     try {
         const docRef = db.collection("customers").doc(id);
@@ -54,12 +49,13 @@ async function fetchCustomerData(id) {
         
         if (doc.exists) {
             const data = doc.data();
-            lastReadingValue = data.lastReading;
+            lastReadingValue = data.lastReading || 0;
+            lastMeterNumber = data.meterNumber;
 
             document.getElementById('customerName').textContent = data.name;
             document.getElementById('customerAddress').textContent = data.address;
             document.getElementById('meterNumber').textContent = data.meterNumber;
-            document.getElementById('lastReading').textContent = data.lastReading;
+            document.getElementById('lastReading').textContent = data.lastReading || 0;
         } else {
             document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า';
         }
@@ -84,10 +80,15 @@ readingForm.addEventListener('submit', async (e) => {
     const currentReading = parseFloat(currentReadingInput.value);
     const photoFile = meterPhotoInput.files[0];
 
-    // ตรวจสอบความถูกต้องของเลขมิเตอร์
+    if (!photoFile) {
+        document.getElementById('statusMessage').style.color = 'red';
+        document.getElementById('statusMessage').textContent = 'กรุณาอัปโหลดรูปภาพ';
+        return;
+    }
+
     if (currentReading <= lastReadingValue) {
         document.getElementById('statusMessage').style.color = 'red';
-        document.getElementById('statusMessage').textContent = 'เลขมิเตอร์ใหม่ต้องมากกว่าครั้งล่าสุด';
+        document.getElementById('statusMessage').textContent = `เลขมิเตอร์ใหม่ต้องมากกว่าครั้งล่าสุด (${lastReadingValue})`;
         return;
     }
 
@@ -102,11 +103,11 @@ readingForm.addEventListener('submit', async (e) => {
         // บันทึกข้อมูลการจดมิเตอร์ลง Firestore
         await db.collection("readings").add({
             customerId: customerId,
-            meterNumber: document.getElementById('meterNumber').textContent,
+            meterNumber: lastMeterNumber,
             currentReading: currentReading,
             previousReading: lastReadingValue,
             readingDate: firebase.firestore.FieldValue.serverTimestamp(),
-            readingBy: loggedInUser.uid,
+            readingBy: loggedInUser.uid, // แก้ไขตรงนี้ให้ใช้ UID ของผู้ใช้ที่ล็อกอินอยู่
             photoURL: photoURL
         });
 
@@ -118,7 +119,6 @@ readingForm.addEventListener('submit', async (e) => {
         document.getElementById('statusMessage').style.color = 'green';
         document.getElementById('statusMessage').textContent = 'บันทึกข้อมูลสำเร็จ!';
         
-        // ล้างฟอร์ม
         readingForm.reset();
         
     } catch (error) {
@@ -128,7 +128,6 @@ readingForm.addEventListener('submit', async (e) => {
     }
 });
 
-// ฟังก์ชันสำหรับจัดการปุ่ม "ออกจากระบบ"
 function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
