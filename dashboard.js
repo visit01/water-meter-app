@@ -16,31 +16,33 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let customers = [];
-let userAgencyId = null;
 let html5QrCode = null;
 
-auth.onAuthStateChanged(async user => {
+auth.onAuthStateChanged(user => {
     if (user) {
         document.getElementById('userEmail').textContent = user.email;
-        const userDoc = await db.collection("users").doc(user.uid).get();
-        if (userDoc.exists) {
-            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
-            userAgencyId = userDoc.data().agencyId;
-        }
-
-        if (userAgencyId) {
-            fetchCustomers();
-            setupSearch();
-            setupLogout();
-            setupQrCodeScanner();
-        } else {
-            console.error("User does not have an agencyId. Please contact admin.");
-            auth.signOut();
-        }
+        fetchUserName(user.uid);
+        fetchCustomers();
+        setupSearch();
+        setupLogout();
+        setupQrCodeScanner();
     } else {
         window.location.href = "index.html";
     }
 });
+
+async function fetchUserName(uid) {
+    try {
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (userDoc.exists) {
+            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+        } else {
+            document.getElementById('userName').textContent = 'ไม่ระบุชื่อ';
+        }
+    } catch (error) {
+        console.error("Error fetching user name:", error);
+    }
+}
 
 async function fetchCustomers() {
     const customersList = document.getElementById('customersList');
@@ -48,7 +50,7 @@ async function fetchCustomers() {
     customersList.innerHTML = '';
     loadingMessage.style.display = 'block';
     try {
-        const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).orderBy('name').get();
+        const snapshot = await db.collection('customers').orderBy('name').get();
         customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         displayCustomers(customers);
     } catch (error) {
