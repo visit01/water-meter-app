@@ -15,8 +15,6 @@ const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let userAgencyId = null;
-
 async function loadDashboardData() {
     await fetchCustomers();
     await fetchReadings();
@@ -31,7 +29,7 @@ async function fetchCustomers() {
     loadingMessage.style.display = 'block';
 
     try {
-        const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).get();
+        const snapshot = await db.collection('customers').get();
         const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         totalCustomersCount.textContent = customers.length;
@@ -64,7 +62,7 @@ async function fetchReadings() {
     loadingMessage.style.display = 'block';
 
     try {
-        const readingsSnapshot = await db.collection('readings').where('agencyId', '==', userAgencyId).orderBy('readingDate', 'desc').get();
+        const readingsSnapshot = await db.collection('readings').orderBy('readingDate', 'desc').get();
         const readings = readingsSnapshot.docs.map(doc => doc.data());
 
         const today = new Date().setHours(0, 0, 0, 0);
@@ -73,12 +71,12 @@ async function fetchReadings() {
         const usersMap = {};
         const customersMap = {};
 
-        const usersSnapshot = await db.collection('users').where('agencyId', '==', userAgencyId).get();
+        const usersSnapshot = await db.collection('users').get();
         usersSnapshot.forEach(doc => {
             usersMap[doc.id] = doc.data().name || 'ไม่ระบุชื่อ';
         });
 
-        const customersSnapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).get();
+        const customersSnapshot = await db.collection('customers').get();
         customersSnapshot.forEach(doc => {
             customersMap[doc.id] = doc.data().name || 'ไม่ระบุชื่อลูกค้า';
         });
@@ -141,15 +139,9 @@ auth.onAuthStateChanged(async user => {
     if (user) {
         const userDoc = await db.collection("users").doc(user.uid).get();
         if (userDoc.exists && userDoc.data().role === 'admin') {
-            userAgencyId = userDoc.data().agencyId;
-            if (userAgencyId) {
-                displayLoggedInUser(user);
-                loadDashboardData();
-                setupAdminLogout();
-            } else {
-                await auth.signOut();
-                window.location.href = "admin-login.html";
-            }
+            displayLoggedInUser(user);
+            loadDashboardData();
+            setupAdminLogout();
         } else {
             await auth.signOut();
             window.location.href = "admin-login.html";
