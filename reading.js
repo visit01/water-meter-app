@@ -28,6 +28,10 @@ let lastMeterNumber = null;
 auth.onAuthStateChanged(user => {
     if (user) {
         loggedInUser = user;
+        // แสดงอีเมลของผู้ใช้ที่ล็อกอิน
+        document.getElementById('userEmail').textContent = loggedInUser.email;
+        fetchUserName(loggedInUser.uid);
+        
         const params = new URLSearchParams(window.location.search);
         customerId = params.get('customerId');
         
@@ -41,6 +45,20 @@ auth.onAuthStateChanged(user => {
         window.location.href = "index.html";
     }
 });
+
+// ฟังก์ชันใหม่สำหรับดึงชื่อเจ้าหน้าที่จาก Firestore
+async function fetchUserName(uid) {
+    try {
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (userDoc.exists) {
+            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+        } else {
+            document.getElementById('userName').textContent = 'ไม่ระบุชื่อ';
+        }
+    } catch (error) {
+        console.error("Error fetching user name:", error);
+    }
+}
 
 async function fetchCustomerData(id) {
     try {
@@ -80,7 +98,6 @@ readingForm.addEventListener('submit', async (e) => {
     const currentReading = parseFloat(currentReadingInput.value);
     const photoFile = meterPhotoInput.files[0];
 
-    // ตรวจสอบค่าของ loggedInUser ก่อนบันทึก
     console.log("Logged in user:", loggedInUser);
     console.log("Logged in user UID:", loggedInUser.uid);
     
