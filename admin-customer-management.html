@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการลูกค้า - ระบบหลังบ้าน</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="admin-dashboard.html">
+                <img src="water-drop-logo.png" alt="Logo" width="30" height="30" class="d-inline-block align-text-top">
+                จัดการลูกค้า
+            </a>
+            <button class="btn btn-danger" id="adminLogoutBtn">ออกจากระบบ</button>
+        </div>
+    </nav>
+
+    <div class="container mt-2 text-end">
+        <small class="text-muted">ล็อกอินโดย:</small>
+        <p class="mb-0" id="userName"></p>
+        <p class="mb-0 fw-bold" id="userAgencyName"></p>
+        <small id="userEmail"></small>
+    </div>
+
+    <div class="container mt-4">
+        <h3 class="mb-4">จัดการข้อมูลลูกค้า</h3>
+        
+        <div class="d-flex justify-content-between mb-3">
+            <input type="text" class="form-control me-2" id="customerSearch" placeholder="ค้นหาลูกค้า...">
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#customerModal" id="addCustomerBtn">เพิ่มลูกค้า</button>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ชื่อลูกค้า</th>
+                                <th>เลขมิเตอร์</th>
+                                <th>เลขล่าสุด</th>
+                                <th>การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-center text-muted" id="customerLoadingMessage">กำลังโหลดข้อมูลลูกค้า...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customerModalLabel">เพิ่มลูกค้าใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customerForm">
+                        <input type="hidden" id="customerId" value="">
+                        <div class="mb-3">
+                            <label for="agencyNameDropdown" class="form-label">หน่วยงาน</label>
+                            <select class="form-select" id="agencyNameDropdown" disabled>
+                                <option id="agencyOption"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerName" class="form-label">ชื่อลูกค้า</label>
+                            <input type="text" class="form-control" id="customerNameInput" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="meterNumber" class="form-label">เลขมิเตอร์</label>
+                            <input type="text" class="form-control" id="meterNumberInput" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerAddress" class="form-label">ที่อยู่</label>
+                            <input type="text" class="form-control" id="customerAddressInput" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lastReading" class="form-label">เลขล่าสุด</label>
+                            <input type="number" class="form-control" id="lastReadingInput" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerLocation" class="form-label">พิกัด GPS</label>
+                            <input type="text" class="form-control" id="customerLocationInput">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">บันทึก</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="customer-management.js"></script>
+</body>
+</html>
