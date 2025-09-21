@@ -17,6 +17,10 @@ const db = firebase.firestore();
 
 let userAgencyId = null;
 
+// ==========================================================
+// ส่วนที่ 1: การประกาศฟังก์ชันทั้งหมด (ย้ายมาไว้ด้านบนสุด)
+// ==========================================================
+
 async function loadDashboardData() {
     await fetchCustomers();
     await fetchReadings();
@@ -31,6 +35,7 @@ async function fetchCustomers() {
     loadingMessage.style.display = 'block';
 
     try {
+        // ใช้ .where() เพื่อกรองข้อมูลตาม agencyId
         const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).get();
         const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         totalCustomersCount.textContent = customers.length;
@@ -63,6 +68,7 @@ async function fetchReadings() {
     loadingMessage.style.display = 'block';
 
     try {
+        // ใช้ .where() เพื่อกรองข้อมูลตาม agencyId
         const readingsSnapshot = await db.collection('readings').where('agencyId', '==', userAgencyId).orderBy('readingDate', 'desc').get();
         const readings = readingsSnapshot.docs.map(doc => doc.data());
 
@@ -128,28 +134,23 @@ function setupAdminLogout() {
     }
 }
 
-// แก้ไขฟังก์ชัน displayLoggedInUser
 async function displayLoggedInUser(user) {
     document.getElementById('userEmail').textContent = user.email;
     const userDoc = await db.collection("users").doc(user.uid).get();
     if (userDoc.exists) {
         document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
     }
-    
-    // เพิ่มส่วนนี้เพื่อดึงและแสดงชื่อหน่วยงาน
-    const agencyDoc = await db.collection("agencies").doc(userAgencyId).get();
-    if (agencyDoc.exists) {
-        document.getElementById('userAgencyName').textContent = agencyDoc.data().agencyName || 'ไม่ระบุหน่วยงาน';
-    } else {
-        document.getElementById('userAgencyName').textContent = 'ไม่พบหน่วยงาน';
-    }
 }
+
+// ==========================================================
+// ส่วนที่ 2: การจัดการสถานะผู้ใช้
+// ==========================================================
 
 auth.onAuthStateChanged(async user => {
     if (user) {
         const userDoc = await db.collection("users").doc(user.uid).get();
         if (userDoc.exists && userDoc.data().role === 'admin') {
-            userAgencyId = userDoc.data().agencyId;
+            userAgencyId = userDoc.data().agencyId; // ดึง agencyId มาเก็บไว้
             if (userAgencyId) {
                 displayLoggedInUser(user);
                 loadDashboardData();
