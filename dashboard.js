@@ -15,90 +15,100 @@ const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let customersData = [];
+let customers = [];
 
 // ==========================================================
-// ส่วนที่ 1: ฟังก์ชันสำหรับจัดการการแสดงผลและการทำงานของ Dashboard
+// ส่วนที่ 1: การจัดการสถานะผู้ใช้และดึงข้อมูล
 // ==========================================================
+
+auth.onAuthStateChanged(user => {
+    if (user) {
+        // ดึงและแสดงข้อมูลผู้ใช้
+        document.getElementById('userEmail').textContent = user.email;
+        fetchUserName(user.uid);
+        
+        fetchCustomers();
+        setupSearch();
+        setupLogout();
+    } else {
+        window.location.href = "index.html";
+    }
+});
+
+// ฟังก์ชันใหม่สำหรับดึงชื่อเจ้าหน้าที่จาก Firestore
+async function fetchUserName(uid) {
+    try {
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (userDoc.exists) {
+            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+        } else {
+            document.getElementById('userName').textContent = 'ไม่ระบุชื่อ';
+        }
+    } catch (error) {
+        console.error("Error fetching user name:", error);
+    }
+}
 
 async function fetchCustomers() {
-    const customerListDiv = document.getElementById('customerList');
+    const customersList = document.getElementById('customersList');
     const loadingMessage = document.getElementById('loadingMessage');
-    
+    customersList.innerHTML = '';
     loadingMessage.style.display = 'block';
 
     try {
-        const snapshot = await db.collection('customers').get();
-        customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        displayCustomers(customersData);
+        const snapshot = await db.collection('customers').orderBy('name').get();
+        customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        displayCustomers(customers);
     } catch (error) {
-        console.error("Error fetching customers: ", error);
-        customerListDiv.innerHTML = '<p class="text-danger text-center">เกิดข้อผิดพลาดในการโหลดข้อมูลลูกค้า</p>';
+        console.error("Error fetching customers:", error);
+        customersList.innerHTML = '<p class="text-danger text-center">เกิดข้อผิดพลาดในการโหลดข้อมูลลูกค้า</p>';
     } finally {
         loadingMessage.style.display = 'none';
     }
 }
 
-// ฟังก์ชันสำหรับแสดงผลข้อมูลลูกค้าในรูปแบบการ์ด (แก้ไขส่วนนี้)
-function displayCustomers(customers) {
-    const customerListDiv = document.getElementById('customerList');
-    customerListDiv.innerHTML = '';
-    
-    if (customers.length === 0) {
-        customerListDiv.innerHTML = '<p class="text-center text-muted">ไม่พบข้อมูลลูกค้า</p>';
-        return;
+function displayCustomers(customerArray) {
+    const customersList = document.getElementById('customersList');
+    customersList.innerHTML = '';
+    if (customerArray.length === 0) {
+        customersList.innerHTML = '<p class="text-center text-muted">ไม่พบข้อมูลลูกค้าที่ตรงกับการค้นหา</p>';
     }
-
-    customers.forEach(customer => {
-        const cardHtml = `
-            <div class="card customer-card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">${customer.name}</h5>
-                    <p class="card-text"><strong>เลขมิเตอร์:</strong> ${customer.meterNumber}</p>
-                    <p class="card-text text-muted">ที่อยู่: ${customer.address}</p>
-                </div>
+    customerArray.forEach(customer => {
+        const item = document.createElement('a');
+        item.href = `reading.html?customerId=${customer.id}`;
+        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <div>
+                <h5 class="mb-1">${customer.name}</h5>
+                <small class="text-muted">เลขมิเตอร์: ${customer.meterNumber}</small>
             </div>
+            <span class="badge bg-primary rounded-pill">เลขล่าสุด: ${customer.lastReading || 0}</span>
         `;
-        
-        // สร้าง div ใหม่และใส่ HTML ของ card เข้าไป
-        const cardContainer = document.createElement('div');
-        cardContainer.className = 'col-12';
-        cardContainer.innerHTML = cardHtml;
-        
-        // เพิ่ม Event Listener ให้กับการ์ดแต่ละใบ
-        const card = cardContainer.querySelector('.customer-card');
-        card.addEventListener('click', () => {
-            // เมื่อคลิก จะนำไปยังหน้า reading.html พร้อมส่ง Customer ID ไปด้วย
-            window.location.href = `reading.html?customerId=${customer.id}`;
-        });
-
-        customerListDiv.appendChild(cardContainer);
+        customersList.appendChild(item);
     });
 }
 
-// ฟังก์ชันสำหรับจัดการการค้นหาลูกค้า
+// ==========================================================
+// ส่วนที่ 2: การจัดการฟังก์ชันอื่นๆ
+// ==========================================================
+
 function setupSearch() {
-    const searchBox = document.getElementById('searchBox');
-    if (searchBox) {
-        searchBox.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredCustomers = customersData.filter(customer => {
-                return customer.name.toLowerCase().includes(searchTerm) || 
-                       customer.meterNumber.toLowerCase().includes(searchTerm);
-            });
-            displayCustomers(filteredCustomers);
-        });
-    }
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredCustomers = customers.filter(customer => 
+            customer.name.toLowerCase().includes(searchTerm) || 
+            customer.meterNumber.includes(searchTerm)
+        );
+        displayCustomers(filteredCustomers);
+    });
 }
 
-// ฟังก์ชันสำหรับจัดการปุ่ม "ออกจากระบบ"
 function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             auth.signOut().then(() => {
-                console.log("User signed out.");
                 window.location.href = "index.html";
             }).catch((error) => {
                 console.error("Logout error:", error);
@@ -106,17 +116,3 @@ function setupLogout() {
         });
     }
 }
-
-// ==========================================================
-// ส่วนที่ 2: การจัดการสถานะผู้ใช้เมื่อโหลดหน้าเว็บ
-// ==========================================================
-
-auth.onAuthStateChanged(user => {
-    if (user) {
-        fetchCustomers();
-        setupLogout();
-        setupSearch();
-    } else {
-        window.location.href = "index.html";
-    }
-});
