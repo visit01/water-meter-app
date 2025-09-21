@@ -31,6 +31,15 @@
                 <h3 class="mb-4">เลือกข้อมูลลูกค้าที่ต้องการบันทึก</h3>
             </div>
         </div>
+        
+        <div class="d-grid gap-2 mb-3">
+            <button id="scanQrCodeBtn" class="btn btn-secondary">
+                สแกน QR Code
+            </button>
+        </div>
+
+        <div id="qr-reader" style="width:100%;"></div>
+
         <div class="input-group mb-3">
             <input type="text" class="form-control" id="searchInput" placeholder="ค้นหาด้วยชื่อหรือเลขมิเตอร์">
         </div>
@@ -43,6 +52,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
     <script src="dashboard.js"></script>
 </body>
 </html>
