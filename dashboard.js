@@ -16,6 +16,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let customers = [];
+let html5QrCode = null;
 
 // ==========================================================
 // ส่วนที่ 1: การจัดการสถานะผู้ใช้และดึงข้อมูล
@@ -23,19 +24,18 @@ let customers = [];
 
 auth.onAuthStateChanged(user => {
     if (user) {
-        // ดึงและแสดงข้อมูลผู้ใช้
         document.getElementById('userEmail').textContent = user.email;
         fetchUserName(user.uid);
         
         fetchCustomers();
         setupSearch();
         setupLogout();
+        setupQrCodeScanner();
     } else {
         window.location.href = "index.html";
     }
 });
 
-// ฟังก์ชันใหม่สำหรับดึงชื่อเจ้าหน้าที่จาก Firestore
 async function fetchUserName(uid) {
     try {
         const userDoc = await db.collection("users").doc(uid).get();
@@ -115,4 +115,43 @@ function setupLogout() {
             });
         });
     }
+}
+
+// ฟังก์ชันสำหรับสแกน QR Code
+function setupQrCodeScanner() {
+    const scanQrCodeBtn = document.getElementById('scanQrCodeBtn');
+    const qrReaderDiv = document.getElementById('qr-reader');
+    const searchInput = document.getElementById('searchInput');
+    
+    // ตั้งค่า HTML5 Qrcode
+    html5QrCode = new Html5Qrcode("qr-reader");
+
+    scanQrCodeBtn.addEventListener('click', () => {
+        // เริ่มสแกนเมื่อคลิกปุ่ม
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+                // เมื่อสแกนสำเร็จ
+                searchInput.value = decodedText;
+                
+                // กระตุ้น Event 'input' เพื่อให้ค้นหาลูกค้าทันที
+                const event = new Event('input');
+                searchInput.dispatchEvent(event);
+                
+                // หยุดการทำงานของกล้อง
+                html5QrCode.stop().then(() => {
+                    qrReaderDiv.style.display = 'none';
+                }).catch(err => {
+                    console.error("Failed to stop scanner:", err);
+                });
+            },
+            (errorMessage) => {
+                // แสดงข้อผิดพลาด
+            }
+        ).catch(err => {
+            console.error("Failed to start scanner:", err);
+            alert("ไม่สามารถเข้าถึงกล้องได้ กรุณาตรวจสอบสิทธิ์การเข้าถึง");
+        });
+    });
 }
