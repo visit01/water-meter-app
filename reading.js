@@ -28,7 +28,6 @@ let lastMeterNumber = null;
 auth.onAuthStateChanged(user => {
     if (user) {
         loggedInUser = user;
-        // แสดงอีเมลของผู้ใช้ที่ล็อกอิน
         document.getElementById('userEmail').textContent = loggedInUser.email;
         fetchUserName(loggedInUser.uid);
         
@@ -41,12 +40,12 @@ auth.onAuthStateChanged(user => {
             document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า';
         }
         setupLogout();
+        setupVoiceInput(); // เพิ่มการเรียกใช้ฟังก์ชันใหม่
     } else {
         window.location.href = "index.html";
     }
 });
 
-// ฟังก์ชันใหม่สำหรับดึงชื่อเจ้าหน้าที่จาก Firestore
 async function fetchUserName(uid) {
     try {
         const userDoc = await db.collection("users").doc(uid).get();
@@ -98,9 +97,6 @@ readingForm.addEventListener('submit', async (e) => {
     const currentReading = parseFloat(currentReadingInput.value);
     const photoFile = meterPhotoInput.files[0];
 
-    console.log("Logged in user:", loggedInUser);
-    console.log("Logged in user UID:", loggedInUser.uid);
-    
     if (!loggedInUser || !loggedInUser.uid) {
         document.getElementById('statusMessage').style.color = 'red';
         document.getElementById('statusMessage').textContent = 'ข้อผิดพลาด: ไม่พบข้อมูลผู้ใช้';
@@ -164,5 +160,57 @@ function setupLogout() {
                 console.error("Logout error:", error);
             });
         });
+    }
+}
+
+// ==========================================================
+// ส่วนที่ 3: ฟังก์ชันการป้อนตัวเลขด้วยเสียง (Web Speech API)
+// ==========================================================
+function setupVoiceInput() {
+    const voiceInputBtn = document.getElementById('voiceInputBtn');
+    const currentReadingInput = document.getElementById('currentReading');
+    const voiceStatus = document.getElementById('voiceStatus');
+
+    if ('webkitSpeechRecognition' in window) {
+        const recognition = new webkitSpeechRecognition();
+        recognition.continuous = false; // หยุดเมื่อผู้ใช้หยุดพูด
+        recognition.lang = 'th-TH'; // กำหนดภาษา
+
+        recognition.onstart = () => {
+            voiceStatus.classList.remove('d-none');
+            voiceStatus.textContent = 'กำลังฟัง... โปรดพูดตัวเลข';
+            voiceInputBtn.disabled = true;
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            const numbers = transcript.match(/\d+/g); // ค้นหาเฉพาะตัวเลข
+            
+            if (numbers) {
+                currentReadingInput.value = numbers.join('');
+            } else {
+                currentReadingInput.value = '';
+            }
+            voiceStatus.textContent = '';
+        };
+
+        recognition.onend = () => {
+            voiceStatus.classList.add('d-none');
+            voiceInputBtn.disabled = false;
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            voiceStatus.textContent = 'เกิดข้อผิดพลาด: ' + event.error;
+            voiceInputBtn.disabled = false;
+        };
+
+        voiceInputBtn.addEventListener('click', () => {
+            recognition.start();
+        });
+
+    } else {
+        voiceInputBtn.style.display = 'none';
+        console.warn('Web Speech API is not supported in this browser.');
     }
 }
