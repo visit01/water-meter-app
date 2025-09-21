@@ -15,9 +15,7 @@ const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ==========================================================
-// ส่วนที่ 1: การประกาศฟังก์ชันทั้งหมด (ย้ายมาไว้ด้านบนสุด)
-// ==========================================================
+let userAgencyId = null;
 
 async function loadDashboardData() {
     await fetchCustomers();
@@ -33,7 +31,7 @@ async function fetchCustomers() {
     loadingMessage.style.display = 'block';
 
     try {
-        const snapshot = await db.collection('customers').get();
+        const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).get();
         const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         totalCustomersCount.textContent = customers.length;
@@ -66,7 +64,7 @@ async function fetchReadings() {
     loadingMessage.style.display = 'block';
 
     try {
-        const readingsSnapshot = await db.collection('readings').orderBy('readingDate', 'desc').get();
+        const readingsSnapshot = await db.collection('readings').where('agencyId', '==', userAgencyId).orderBy('readingDate', 'desc').get();
         const readings = readingsSnapshot.docs.map(doc => doc.data());
 
         const today = new Date().setHours(0, 0, 0, 0);
@@ -75,12 +73,12 @@ async function fetchReadings() {
         const usersMap = {};
         const customersMap = {};
 
-        const usersSnapshot = await db.collection('users').get();
+        const usersSnapshot = await db.collection('users').where('agencyId', '==', userAgencyId).get();
         usersSnapshot.forEach(doc => {
             usersMap[doc.id] = doc.data().name || 'ไม่ระบุชื่อ';
         });
 
-        const customersSnapshot = await db.collection('customers').get();
+        const customersSnapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).get();
         customersSnapshot.forEach(doc => {
             customersMap[doc.id] = doc.data().name || 'ไม่ระบุชื่อลูกค้า';
         });
@@ -110,7 +108,6 @@ async function fetchReadings() {
         });
 
         todayReadingsCount.textContent = todayCount;
-
     } catch (error) {
         console.error("Error fetching readings:", error);
         tableBody.innerHTML = '<tr><td colspan="6" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
@@ -132,16 +129,27 @@ function setupAdminLogout() {
     }
 }
 
-// ==========================================================
-// ส่วนที่ 2: การจัดการสถานะผู้ใช้ (เรียกฟังก์ชันที่ประกาศไว้แล้ว)
-// ==========================================================
+async function displayLoggedInUser(user) {
+    document.getElementById('userEmail').textContent = user.email;
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    if (userDoc.exists) {
+        document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+    }
+}
 
 auth.onAuthStateChanged(async user => {
     if (user) {
         const userDoc = await db.collection("users").doc(user.uid).get();
         if (userDoc.exists && userDoc.data().role === 'admin') {
-            loadDashboardData();
-            setupAdminLogout();
+            userAgencyId = userDoc.data().agencyId;
+            if (userAgencyId) {
+                displayLoggedInUser(user);
+                loadDashboardData();
+                setupAdminLogout();
+            } else {
+                await auth.signOut();
+                window.location.href = "admin-login.html";
+            }
         } else {
             await auth.signOut();
             window.location.href = "admin-login.html";
