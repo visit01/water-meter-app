@@ -93,25 +93,23 @@ readingForm.addEventListener('submit', async (e) => {
     }
 
     try {
-        // อัปโหลดรูปภาพไปยัง Cloud Storage
         const storageRef = storage.ref();
         const photoPath = `readings/${customerId}/${Date.now()}-${photoFile.name}`;
         const photoRef = storageRef.child(photoPath);
         await photoRef.put(photoFile);
         const photoURL = await photoRef.getDownloadURL();
 
-        // บันทึกข้อมูลการจดมิเตอร์ลง Firestore
+        // แก้ไข: ใช้ loggedInUser.uid เพื่อบันทึก ID ที่ถูกต้อง
         await db.collection("readings").add({
             customerId: customerId,
             meterNumber: lastMeterNumber,
             currentReading: currentReading,
             previousReading: lastReadingValue,
             readingDate: firebase.firestore.FieldValue.serverTimestamp(),
-            readingBy: loggedInUser.uid, // แก้ไขตรงนี้ให้ใช้ UID ของผู้ใช้ที่ล็อกอินอยู่
+            readingBy: loggedInUser.uid, 
             photoURL: photoURL
         });
 
-        // อัปเดตเลขมิเตอร์ล่าสุดใน Collection 'customers'
         await db.collection("customers").doc(customerId).update({
             lastReading: currentReading
         });
