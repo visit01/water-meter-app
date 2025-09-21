@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบหลังบ้าน - Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- เชื่อมต่อกับไฟล์ CSS ของเราเอง -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- แถบนำทาง (Navbar) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <img src="water-drop-logo.png" alt="Logo" width="30" height="30" class="d-inline-block align-text-top">
+                Admin Dashboard
+            </span>
+            <button class="btn btn-danger" id="adminLogoutBtn">ออกจากระบบ</button>
+        </div>
+    </nav>
+
+    <!-- ส่วนแสดงข้อมูลผู้ใช้ที่ล็อกอินอยู่ -->
+    <div class="container mt-2 text-end">
+        <small class="text-muted">ล็อกอินโดย:</small>
+        <p class="mb-0" id="userName"></p>
+        <p class="mb-0 fw-bold" id="userAgencyName"></p>
+        <small id="userEmail"></small>
+    </div>
+
+    <!-- ส่วนเนื้อหาหลัก -->
+    <div class="container mt-4">
+        <h3 class="mb-4">ภาพรวมระบบ</h3>
+
+        <!-- แผนภาพรวม -->
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card text-white bg-info shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">จำนวนลูกค้าทั้งหมด</h5>
+                        <p class="card-text fs-1" id="totalCustomersCount">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card text-white bg-success shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">มิเตอร์ที่จดแล้ววันนี้</h5>
+                        <p class="card-text fs-1" id="todayReadingsCount">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- เพิ่มปุ่มสำหรับจัดการลูกค้า -->
+        <div class="mt-4 mb-4 text-center">
+            <a href="customer_management.html" class="btn btn-primary btn-lg shadow">
+                จัดการข้อมูลลูกค้า
+            </a>
+        </div>
+
+        <!-- ส่วนแสดงข้อมูลลูกค้า -->
+        <div class="card mt-4 mb-4 shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">ข้อมูลลูกค้า</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ชื่อลูกค้า</th>
+                                <th>เลขมิเตอร์</th>
+                                <th>ที่อยู่</th>
+                                <th>เลขล่าสุด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            <!-- ข้อมูลจะถูกโหลดจาก Firestore -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-center text-muted" id="customersLoadingMessage">กำลังโหลดข้อมูลลูกค้า...</p>
+            </div>
+        </div>
+
+        <!-- ส่วนจัดการข้อมูลการจดมิเตอร์ -->
+        <div class="card mt-4 mb-4 shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">ประวัติการจดมิเตอร์</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ชื่อเจ้าหน้าที่</th>
+                                <th>ชื่อลูกค้า</th>
+                                <th>เลขมิเตอร์</th>
+                                <th>เลขที่จด</th>
+                                <th>วันที่</th>
+                                <th>รูปภาพ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="readingsTableBody">
+                            <!-- ข้อมูลจะถูกโหลดจาก Firestore -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-center text-muted" id="readingsLoadingMessage">กำลังโหลดข้อมูลการจดมิเตอร์...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs และไฟล์ JavaScript ของเรา -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="dashboard-admin.js"></script>
+</body>
+</html>
