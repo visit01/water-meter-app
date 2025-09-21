@@ -80,6 +80,17 @@ readingForm.addEventListener('submit', async (e) => {
     const currentReading = parseFloat(currentReadingInput.value);
     const photoFile = meterPhotoInput.files[0];
 
+    // ตรวจสอบค่าของ loggedInUser ก่อนบันทึก
+    console.log("Logged in user:", loggedInUser);
+    console.log("Logged in user UID:", loggedInUser.uid);
+    
+    if (!loggedInUser || !loggedInUser.uid) {
+        document.getElementById('statusMessage').style.color = 'red';
+        document.getElementById('statusMessage').textContent = 'ข้อผิดพลาด: ไม่พบข้อมูลผู้ใช้';
+        console.error("No user data found.");
+        return;
+    }
+
     if (!photoFile) {
         document.getElementById('statusMessage').style.color = 'red';
         document.getElementById('statusMessage').textContent = 'กรุณาอัปโหลดรูปภาพ';
@@ -99,7 +110,6 @@ readingForm.addEventListener('submit', async (e) => {
         await photoRef.put(photoFile);
         const photoURL = await photoRef.getDownloadURL();
 
-        // แก้ไข: ใช้ loggedInUser.uid เพื่อบันทึก ID ที่ถูกต้อง
         await db.collection("readings").add({
             customerId: customerId,
             meterNumber: lastMeterNumber,
