@@ -16,31 +16,44 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let customers = [];
+let userAgencyId = null;
 let html5QrCode = null;
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
     if (user) {
         document.getElementById('userEmail').textContent = user.email;
-        fetchUserName(user.uid);
-        fetchCustomers();
-        setupSearch();
-        setupLogout();
-        setupQrCodeScanner();
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        if (userDoc.exists) {
+            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+            userAgencyId = userDoc.data().agencyId;
+        }
+
+        if (userAgencyId) {
+            fetchAgencyName(userAgencyId);
+            fetchCustomers();
+            setupSearch();
+            setupLogout();
+            setupQrCodeScanner();
+        } else {
+            console.error("User does not have an agencyId. Please contact admin.");
+            auth.signOut();
+        }
     } else {
         window.location.href = "index.html";
     }
 });
 
-async function fetchUserName(uid) {
+// ฟังก์ชันสำหรับดึงชื่อหน่วยงานจาก Firestore
+async function fetchAgencyName(agencyId) {
     try {
-        const userDoc = await db.collection("users").doc(uid).get();
-        if (userDoc.exists) {
-            document.getElementById('userName').textContent = userDoc.data().name || 'ไม่ระบุชื่อ';
+        const agencyDoc = await db.collection("agencies").doc(agencyId).get();
+        if (agencyDoc.exists) {
+            document.getElementById('userAgencyName').textContent = agencyDoc.data().agencyName || 'ไม่ระบุหน่วยงาน';
         } else {
-            document.getElementById('userName').textContent = 'ไม่ระบุชื่อ';
+            document.getElementById('userAgencyName').textContent = 'ไม่พบหน่วยงาน';
         }
     } catch (error) {
-        console.error("Error fetching user name:", error);
+        console.error("Error fetching agency name:", error);
     }
 }
 
@@ -50,7 +63,7 @@ async function fetchCustomers() {
     customersList.innerHTML = '';
     loadingMessage.style.display = 'block';
     try {
-        const snapshot = await db.collection('customers').orderBy('name').get();
+        const snapshot = await db.collection('customers').where('agencyId', '==', userAgencyId).orderBy('name').get();
         customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         displayCustomers(customers);
     } catch (error) {
