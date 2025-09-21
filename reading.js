@@ -20,27 +20,28 @@ let customerId = null;
 let loggedInUser = null;
 let lastReadingValue = 0;
 let lastMeterNumber = null;
+let userAgencyId = null;
 
-// ==========================================================
-// ส่วนที่ 1: การจัดการสถานะผู้ใช้และดึงข้อมูลลูกค้า
-// ==========================================================
-
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
     if (user) {
         loggedInUser = user;
         document.getElementById('userEmail').textContent = loggedInUser.email;
         fetchUserName(loggedInUser.uid);
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        if (userDoc.exists) {
+            userAgencyId = userDoc.data().agencyId;
+        }
         
         const params = new URLSearchParams(window.location.search);
         customerId = params.get('customerId');
         
-        if (customerId) {
+        if (customerId && userAgencyId) {
             fetchCustomerData(customerId);
         } else {
-            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า';
+            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า หรือไม่มีสังกัดหน่วยงาน';
         }
         setupLogout();
-        setupVoiceInput(); // เพิ่มการเรียกใช้ฟังก์ชันใหม่
+        setupVoiceInput();
     } else {
         window.location.href = "index.html";
     }
@@ -61,20 +62,17 @@ async function fetchUserName(uid) {
 
 async function fetchCustomerData(id) {
     try {
-        const docRef = db.collection("customers").doc(id);
-        const doc = await docRef.get();
-        
-        if (doc.exists) {
-            const data = doc.data();
+        const docRef = await db.collection("customers").doc(id).get();
+        if (docRef.exists && docRef.data().agencyId === userAgencyId) {
+            const data = docRef.data();
             lastReadingValue = data.lastReading || 0;
             lastMeterNumber = data.meterNumber;
-
             document.getElementById('customerName').textContent = data.name;
             document.getElementById('customerAddress').textContent = data.address;
             document.getElementById('meterNumber').textContent = data.meterNumber;
             document.getElementById('lastReading').textContent = data.lastReading || 0;
         } else {
-            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า';
+            document.getElementById('statusMessage').textContent = 'ไม่พบข้อมูลลูกค้า หรือไม่มีสังกัดหน่วยงาน';
         }
     } catch (error) {
         console.error("Error fetching customer data:", error);
@@ -82,47 +80,37 @@ async function fetchCustomerData(id) {
     }
 }
 
-// ==========================================================
-// ส่วนที่ 2: การจัดการฟอร์มและบันทึกข้อมูล
-// ==========================================================
-
 const readingForm = document.getElementById('readingForm');
 readingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     document.getElementById('statusMessage').style.color = 'black';
     document.getElementById('statusMessage').textContent = 'กำลังบันทึกข้อมูล...';
-
     const currentReadingInput = document.getElementById('currentReading');
     const meterPhotoInput = document.getElementById('meterPhoto');
     const currentReading = parseFloat(currentReadingInput.value);
     const photoFile = meterPhotoInput.files[0];
-
     if (!loggedInUser || !loggedInUser.uid) {
         document.getElementById('statusMessage').style.color = 'red';
         document.getElementById('statusMessage').textContent = 'ข้อผิดพลาด: ไม่พบข้อมูลผู้ใช้';
         console.error("No user data found.");
         return;
     }
-
     if (!photoFile) {
         document.getElementById('statusMessage').style.color = 'red';
         document.getElementById('statusMessage').textContent = 'กรุณาอัปโหลดรูปภาพ';
         return;
     }
-
     if (currentReading <= lastReadingValue) {
         document.getElementById('statusMessage').style.color = 'red';
         document.getElementById('statusMessage').textContent = `เลขมิเตอร์ใหม่ต้องมากกว่าครั้งล่าสุด (${lastReadingValue})`;
         return;
     }
-
     try {
         const storageRef = storage.ref();
         const photoPath = `readings/${customerId}/${Date.now()}-${photoFile.name}`;
         const photoRef = storageRef.child(photoPath);
         await photoRef.put(photoFile);
         const photoURL = await photoRef.getDownloadURL();
-
         await db.collection("readings").add({
             customerId: customerId,
             meterNumber: lastMeterNumber,
@@ -130,25 +118,21 @@ readingForm.addEventListener('submit', async (e) => {
             previousReading: lastReadingValue,
             readingDate: firebase.firestore.FieldValue.serverTimestamp(),
             readingBy: loggedInUser.uid, 
-            photoURL: photoURL
+            photoURL: photoURL,
+            agencyId: userAgencyId
         });
-
         await db.collection("customers").doc(customerId).update({
             lastReading: currentReading
         });
-
         document.getElementById('statusMessage').style.color = 'green';
         document.getElementById('statusMessage').textContent = 'บันทึกข้อมูลสำเร็จ!';
-        
         readingForm.reset();
-        
     } catch (error) {
         console.error("Error saving data:", error);
         document.getElementById('statusMessage').style.color = 'red';
         document.getElementById('statusMessage').textContent = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message;
     }
 });
-
 function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -162,30 +146,22 @@ function setupLogout() {
         });
     }
 }
-
-// ==========================================================
-// ส่วนที่ 3: ฟังก์ชันการป้อนตัวเลขด้วยเสียง (Web Speech API)
-// ==========================================================
 function setupVoiceInput() {
     const voiceInputBtn = document.getElementById('voiceInputBtn');
     const currentReadingInput = document.getElementById('currentReading');
     const voiceStatus = document.getElementById('voiceStatus');
-
     if ('webkitSpeechRecognition' in window) {
         const recognition = new webkitSpeechRecognition();
-        recognition.continuous = false; // หยุดเมื่อผู้ใช้หยุดพูด
-        recognition.lang = 'th-TH'; // กำหนดภาษา
-
+        recognition.continuous = false;
+        recognition.lang = 'th-TH';
         recognition.onstart = () => {
             voiceStatus.classList.remove('d-none');
             voiceStatus.textContent = 'กำลังฟัง... โปรดพูดตัวเลข';
             voiceInputBtn.disabled = true;
         };
-
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
-            const numbers = transcript.match(/\d+/g); // ค้นหาเฉพาะตัวเลข
-            
+            const numbers = transcript.match(/\d+/g);
             if (numbers) {
                 currentReadingInput.value = numbers.join('');
             } else {
@@ -193,22 +169,18 @@ function setupVoiceInput() {
             }
             voiceStatus.textContent = '';
         };
-
         recognition.onend = () => {
             voiceStatus.classList.add('d-none');
             voiceInputBtn.disabled = false;
         };
-
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
             voiceStatus.textContent = 'เกิดข้อผิดพลาด: ' + event.error;
             voiceInputBtn.disabled = false;
         };
-
         voiceInputBtn.addEventListener('click', () => {
             recognition.start();
         });
-
     } else {
         voiceInputBtn.style.display = 'none';
         console.warn('Web Speech API is not supported in this browser.');
