@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <span class="navbar-brand">
@@ -17,8 +18,16 @@
             <button class="btn btn-danger" id="adminLogoutBtn">ออกจากระบบ</button>
         </div>
     </nav>
+
+    <div class="container mt-2 text-end">
+        <small class="text-muted">ล็อกอินโดย:</small>
+        <p class="mb-0" id="userName"></p>
+        <small id="userEmail"></small>
+    </div>
+
     <div class="container mt-4">
         <h3 class="mb-4">ภาพรวมระบบ</h3>
+
         <div class="row">
             <div class="col-md-6 mb-4">
                 <div class="card text-white bg-info shadow-sm">
@@ -37,6 +46,7 @@
                 </div>
             </div>
         </div>
+
         <div class="card mt-4 mb-4 shadow">
             <div class="card-header bg-white">
                 <h5 class="mb-0">จัดการข้อมูลลูกค้า</h5>
@@ -53,12 +63,13 @@
                             </tr>
                         </thead>
                         <tbody id="customersTableBody">
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
                 <p class="text-center text-muted" id="customersLoadingMessage">กำลังโหลดข้อมูลลูกค้า...</p>
             </div>
         </div>
+
         <div class="card mt-4 mb-4 shadow">
             <div class="card-header bg-white">
                 <h5 class="mb-0">ประวัติการจดมิเตอร์</h5>
@@ -77,13 +88,14 @@
                             </tr>
                         </thead>
                         <tbody id="readingsTableBody">
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
                 <p class="text-center text-muted" id="readingsLoadingMessage">กำลังโหลดข้อมูลการจดมิเตอร์...</p>
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
